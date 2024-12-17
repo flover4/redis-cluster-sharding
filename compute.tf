@@ -3,9 +3,7 @@
 	  count               =  "${var.num}"	  
 	#Multi-ADs
 	availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[count.index < var.num/(var.slave_num+1) ? 0 : 1],"name")}"
-	#single-AD
-	#availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[count.index % "${length(data.oci_identity_availability_domains.ADs.availability_domains)}"],"name")}"
-	cluster_placement_group_id = "${var.cluster_placement_group_ocid}"
+
 	  fault_domain        = "FAULT-DOMAIN-3"
 	  compartment_id      = "${var.compartment_ocid}"
 	  display_name        = "${var.name}-${count.index}"
