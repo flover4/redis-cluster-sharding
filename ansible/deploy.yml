@@ -1,0 +1,5 @@
+
+- hosts:
+  - redis_nodes
+  roles:
+  - redis

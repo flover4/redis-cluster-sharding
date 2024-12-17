@@ -1,0 +1,23 @@
+---
+- name: 注册cluster_host变量
+  set_fact:
+    cluster_host: []
+
+- name: 设置cluster_host变量
+  set_fact:
+    cluster_host: "{{ groups['redis_nodes'] | map('extract', hostvars, ['private_ip']) | join(':6379 ') }}"
+
+- name: 初始化cluster with auth
+  when: (pass != '')
+  shell:
+    cmd: "/usr/local/bin/redis-cli -h 127.0.0.1 -a '{{ pass }}' --cluster create {{ cluster_host }}:6379  --cluster-replicas {{ slave_num }} --cluster-yes"
+  become: true
+
+- name: 初始化cluster with no auth
+  when: (pass == '')
+  shell:
+    cmd: "/usr/local/bin/redis-cli -h 127.0.0.1 --cluster create {{ cluster_host }}:6379  --cluster-replicas {{ slave_num }} --cluster-yes"
+  become: true
+
+- debug:
+    msg: "Restart All servers to resolve the overcommit and transparent huge page warnings"

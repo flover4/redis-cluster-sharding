@@ -1,0 +1,24 @@
+- name: Disable SELinux
+  selinux:
+    state: disabled
+  when:
+    - ansible_os_family == "RedHat"
+  become: true  
+
+- name: stop apparmor Ubuntu
+  ansible.builtin.service:
+    name: apparmor
+    state: stopped
+  when:
+    - ansible_os_family == "Debian"
+  become: true
+  ignore_errors: True
+  
+- name: disabled apparmor Ubuntu
+  ansible.builtin.service:
+    name: apparmor
+    enabled: no
+  when:
+    - ansible_os_family == "Debian"
+  become: true
+  ignore_errors: True

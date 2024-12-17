@@ -1,0 +1,29 @@
+---
+- name: 配置需要的资源
+  include_tasks: 1.setup_requirements.yml
+
+- name: 初始化安装
+  include_tasks: 2.install.yml
+
+- name: 配置文件预设
+  include_tasks: 3.copy.yml
+  
+- name: 关闭selinux
+  include_tasks: 4.selinux.yml
+
+- name: 关闭firewall
+  include_tasks: 5.firewall.yml
+
+- name: 系统服务设置
+  include_tasks: 6.systemd.yml
+
+- name: 判断是否首次执行task
+  systemd:
+    name: redis
+    state: "started"
+  register: service_status
+  become: true
+
+- name: 集群初始化
+  when: ( redis_role == "master" and service_status.changed == true and service_status.failed == false)
+  include_tasks: 8.init-cluster.yml

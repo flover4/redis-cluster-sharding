@@ -1,0 +1,52 @@
+---
+- name: Install dependancies
+  package:
+    name: [cmake, make, python3-pip, libselinux-python3]
+    state: present
+  when:
+    - ansible_os_family == "RedHat"
+  become: true
+
+- name: Install dependancies Debian
+  ansible.builtin.apt:
+    pkg:
+    - cmake
+    - make
+    - python3-pip
+    update_cache: yes
+  when:
+    - ansible_os_family == "Debian"
+  become: true
+
+- name: Install Python dependancies
+  pip:
+    name: netaddr
+    executable: pip3
+  become: true
+
+- name: check for systemd
+  stat:
+    path: /etc/systemd
+  register: systemd_check
+  become: true
+
+- name: Create filesystem
+  filesystem:
+    fstype: ext4
+    dev: /dev/sdb
+  become: true
+
+- name: init dir
+  file:
+    name: "/data"
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Mount up device
+  mount:
+    path: "/data"
+    src: /dev/sdb
+    fstype: ext4
+    state: mounted
+  become: true

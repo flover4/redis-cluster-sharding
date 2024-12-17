@@ -1,0 +1,137 @@
+---
+- name: Create Redis dir's
+  file:
+   path: "{{ item }}"
+   state: directory
+   mode: 0755
+  with_items:
+    - "{{ redis_conf_dir }}"
+    - "{{ redis_run_dir }}"
+    - "{{ redis_lib_dir }}"
+    - "{{ redis_dbdir }}"
+    #- "{{ redis_backup_dir }}"
+  become: true
+
+- name: Create Redis LOG DIR
+  file:
+   path: "{{ item }}"
+   state: touch
+   mode: 0755
+  with_items:
+    - "{{ redis_logfile }}"
+  become: true
+
+- name: Overcommit_memory warnings Fix
+  lineinfile:
+    path: "/etc/sysctl.conf"
+    line: "vm.overcommit_memory = 1"
+  become: true
+
+- name: Sysctl_tcp_max_tw_buckets Optimization
+  lineinfile:
+    path: "/etc/sysctl.conf"
+    line: "net.ipv4.tcp_max_tw_buckets = 150000"
+  become: true
+
+- name: Sysctl_tcp_timestamps Optimization
+  lineinfile:
+    path: "/etc/sysctl.conf"
+    line: "net.ipv4.tcp_timestamps = 1"
+  become: true
+
+- name: Sysctl_tcp_tw_reuse Optimization
+  lineinfile:
+    path: "/etc/sysctl.conf"
+    line: "net.ipv4.tcp_tw_reuse = 1"
+  become: true
+
+- name: Sysctl_ip_local_port_range Optimization
+  lineinfile:
+    path: "/etc/sysctl.conf"
+    line: "net.ipv4.ip_local_port_range = 9000 65500"
+  become: true
+
+# Transparent Huge Pages - Setup
+- name: Transparent Huge Pages(THP) Setup
+  shell:
+    cmd: echo never > /sys/kernel/mm/transparent_hugepage/enabled
+  become: true
+
+# Transparent Huge Pages - Retain
+- name: Transparent Huge Pages(THP) Retain
+  blockinfile:
+    path: "/etc/rc.local"
+    block: |
+      /usr/bin/echo never > /sys/kernel/mm/transparent_hugepage/enabled
+      /usr/bin/systemctl restart redis
+  become: true
+
+# Transparent Huge Pages - RCLocal
+- name: Transparent Huge Pages(THP) RCLocal Executable
+  shell:
+    cmd: chmod +x /etc/rc.d/rc.local
+  become: true
+
+- name: configure system settings, file descriptors and number of threads
+  pam_limits:
+    domain: 'root'
+    limit_type: "{{item.limit_type}}"
+    limit_item: "{{item.limit_item}}"
+    value: "{{item.value}}"
+  with_items:
+    - { limit_type: '-', limit_item: 'nofile', value: 65535 }
+    - { limit_type: '-', limit_item: 'nproc', value: 65535 }
+    - { limit_type: 'soft', limit_item: 'memlock', value: unlimited }
+    - { limit_type: 'hard', limit_item: 'memlock', value: unlimited }
+  become: true
+
+- name: configure system settings, file descriptors and number of threads
+  pam_limits:
+    domain: '*'
+    limit_type: "{{item.limit_type}}"
+    limit_item: "{{item.limit_item}}"
+    value: "{{item.value}}"
+  with_items:
+    - { limit_type: '-', limit_item: 'nofile', value: 65535 }
+    - { limit_type: '-', limit_item: 'nproc', value: 65535 }
+    - { limit_type: 'soft', limit_item: 'memlock', value: unlimited }
+    - { limit_type: 'hard', limit_item: 'memlock', value: unlimited }
+  become: true
+
+- name: reload settings from all system configuration files
+  shell: sysctl --system
+  become: true
+
+- name: Download and Extract Redis {{ redis_version }}
+  unarchive:
+    src: "{{ redis_url }}"
+    dest: "{{ install_dir }}"
+    remote_src: yes
+  register: download_and_unpack_redis
+  until: download_and_unpack_redis is succeeded
+  retries: 5
+  become: true
+
+- name: Run 'make install' target as root
+  make:
+    chdir: "{{ redis_dir }}/src/"
+    target: install
+  become: true
+
+- name: copy redis-server to /usr/local/bin/
+  copy:
+    src: "{{ redis_dir }}/src/redis-server"
+    dest: /usr/local/bin/
+    mode: 0755
+    remote_src: yes
+  become: true
+  ignore_errors: True
+
+- name: copy redis-cli to /usr/local/bin/
+  copy:
+    src: "{{ redis_dir }}/src/redis-cli"
+    dest: /usr/local/bin/
+    remote_src: yes
+    mode: 0755
+  become: true
+  ignore_errors: True

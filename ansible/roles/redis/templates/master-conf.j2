@@ -1,0 +1,68 @@
+# 基础配置
+port {{ redis_port }}
+bind {{ ansible_default_ipv4.address }} {{ redis_bind_loop }}
+daemonize yes
+tcp-backlog 511
+timeout 0
+tcp-keepalive 300
+supervised auto
+pidfile /var/run/redis.pid
+maxclients 30000
+maxmemory 5368709120
+protected-mode yes
+masterauth "{{ redis_requirepass }}"
+requirepass "{{ redis_requirepass }}"
+
+# 持久化配置
+no-appendfsync-on-rewrite yes
+stop-writes-on-bgsave-error yes
+
+# AOF(关闭)
+appendonly no
+dir {{ redis_dbdir }}
+
+# RDB(关闭)
+databases 16
+# save 900 1
+# save 300 10
+# save 60 10000
+save ""
+dbfilename dump.rdb
+rdbcompression yes
+rdbchecksum yes
+
+# 集群配置
+cluster-enabled yes
+cluster-config-file nodes_6379.conf
+cluster-node-timeout 18000
+
+# 日志配置
+loglevel notice
+logfile {{ redis_logfile }}
+
+# 过期策略
+#maxmemory-policy noeviction
+maxmemory-policy allkeys-lru
+maxmemory-samples 3
+
+# 慢日志
+slowlog-log-slower-than 10000
+slowlog-max-len 128
+
+# 其他参数
+lua-time-limit 5000
+latency-monitor-threshold 0
+notify-keyspace-events ""
+hash-max-ziplist-entries 512
+hash-max-ziplist-value 64
+list-max-ziplist-size -2
+list-compress-depth 0
+set-max-intset-entries 512
+zset-max-ziplist-entries 128
+zset-max-ziplist-value 64
+hll-sparse-max-bytes 3000
+activerehashing yes
+client-output-buffer-limit normal 0 0 0
+client-output-buffer-limit slave 256mb 64mb 60
+client-output-buffer-limit pubsub 32mb 8mb 60
+hz 10
